@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SBR Secure Vault</title>
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+}
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+.card {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+input, textarea, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
+}
+button {
+    background: #38bdf8;
+    color: #000;
+    cursor: pointer;
+    font-weight: bold;
+}
+.hidden { display: none; }
+.note {
+    background: #334155;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+}
+.small { font-size: 12px; opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>SBR Secure Vault 🔐</h1>
+
+<div id="loginBox" class="card">
+    <h3>Enter Master Password</h3>
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="login()">Unlock</button>
+    <p id="msg"></p>
+</div>
+
+<div id="vault" class="hidden">
+
+<div class="card">
+    <h3>Add Secret Note</h3>
+    <input id="title" placeholder="Title">
+    <textarea id="note" placeholder="Your secret note"></textarea>
+    <button onclick="saveNote()">Encrypt & Save</button>
+</div>
+
+<div class="card">
+    <h3>Search</h3>
+    <input id="search" oninput="render()" placeholder="Search notes">
+</div>
+
+<div id="notes"></div>
+
+</div>
+
+</div>
+
+<script>
+const MASTER_PASSWORD = "Sobuj@2026";
+let notes = JSON.parse(localStorage.getItem("vault_notes") || "[]");
+
+function login(){
+    const p = document.getElementById("pass").value;
+    if(p === MASTER_PASSWORD){
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("vault").classList.remove("hidden");
+        render();
+    } else {
+        document.getElementById("msg").innerText = "Wrong Password!";
+    }
+}
+
+// simple base64 (not real AES for simplicity demo)
+function encode(str){
+    return btoa(unescape(encodeURIComponent(str)));
+}
+function decode(str){
+    return decodeURIComponent(escape(atob(str)));
+}
+
+function saveNote(){
+    const title = document.getElementById("title").value;
+    const note = document.getElementById("note").value;
+
+    if(!title || !note) return;
+
+    const encrypted = encode(note);
+
+    notes.push({
+        id: Date.now(),
+        title,
+        data: encrypted
+    });
+
+    localStorage.setItem("vault_notes", JSON.stringify(notes));
+    document.getElementById("title").value = "";
+    document.getElementById("note").value = "";
+    render();
+}
+
+function deleteNote(id){
+    notes = notes.filter(n => n.id !== id);
+    localStorage.setItem("vault_notes", JSON.stringify(notes));
+    render();
+}
+
+function render(){
+    const q = document.getElementById("search").value || "";
+    const box = document.getElementById("notes");
+    box.innerHTML = "";
+
+    notes.filter(n => n.title.toLowerCase().includes(q.toLowerCase())).forEach(n => {
+        const div = document.createElement("div");
+        div.className = "note";
+        div.innerHTML = `
+            <b>${n.title}</b>
+            <p class="small">${decode(n.data)}</p>
+            <button onclick="deleteNote(${n.id})">Delete</button>
+        `;
+        box.appendChild(div);
+    });
+}
+</script>
+
+</body>
+</html>
